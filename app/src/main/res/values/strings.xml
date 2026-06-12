@@ -1,5 +1,10 @@
 <resources>
-    <string name="app_name">AndroidLabs</string>
-    <string name="hello_world">Hello World</string>
-    <string name="button_text">I\'m a button!</string>
+    <string name="app_name">CST2335 Laboratoire 4</string>
+    <string name="type_here">Tapez ici</string>
+    <string name="urgent">Urgent</string>
+    <string name="add">Ajouter</string>
+    <string name="delete_title">Voulez-vous supprimer ceci?</string>
+    <string name="selected_row">La ligne sélectionnée est : </string>
+    <string name="yes">Oui</string>
+    <string name="no">Non</string>
 </resources>
