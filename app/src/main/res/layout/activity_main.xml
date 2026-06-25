@@ -1,42 +1,23 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    android:id="@+id/main"
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:orientation="vertical">
+    android:background="#000000">
 
-    <ListView
-        android:id="@+id/todoListView"
+    <ImageView
+        android:id="@+id/catImageView"
         android:layout_width="match_parent"
-        android:layout_height="0dp"
-        android:layout_weight="1" />
+        android:layout_height="match_parent"
+        android:scaleType="fitCenter"
+        android:contentDescription="Cat image" />
 
-    <LinearLayout
+    <ProgressBar
+        android:id="@+id/catProgressBar"
+        style="?android:attr/progressBarStyleHorizontal"
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:orientation="horizontal"
-        android:padding="8dp">
+        android:layout_height="8dp"
+        android:layout_gravity="bottom"
+        android:max="100"
+        android:progress="0" />
 
-        <EditText
-            android:id="@+id/todoEditText"
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:hint="@string/type_here"
-            android:inputType="text" />
-
-        <Switch
-            android:id="@+id/urgentSwitch"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="@string/urgent" />
-
-        <Button
-            android:id="@+id/addButton"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="@string/add" />
-
-    </LinearLayout>
-
-</LinearLayout>
+</FrameLayout>
