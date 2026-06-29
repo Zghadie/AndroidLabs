@@ -1,132 +1,159 @@
 package com.example.androidlabs;
 
-import android.graphics.Bitmap;
-import android.graphics.BitmapFactory;
+import android.content.Intent;
+import android.graphics.Color;
 import android.os.AsyncTask;
 import android.os.Bundle;
-import android.widget.ImageView;
-import android.widget.ProgressBar;
+import android.util.Log;
+import android.view.View;
+import android.view.ViewGroup;
+import android.widget.AdapterView;
+import android.widget.BaseAdapter;
+import android.widget.ListView;
+import android.widget.TextView;
+import android.widget.Toast;
 
 import androidx.appcompat.app.AppCompatActivity;
 
+import org.json.JSONArray;
 import org.json.JSONObject;
 
 import java.io.BufferedInputStream;
 import java.io.BufferedReader;
-import java.io.File;
-import java.io.FileOutputStream;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.net.HttpURLConnection;
 import java.net.URL;
+import java.util.ArrayList;
 
 public class MainActivity extends AppCompatActivity {
 
-    private ImageView catImageView;
-    private ProgressBar catProgressBar;
-    private CatImages catTask;
+    private ListView characterList;
+    private ArrayList<StarWarsCharacter> characters = new ArrayList<>();
+    private CharacterAdapter adapter;
+    private FetchCharactersTask fetchTask;
 
-    private static final String CAT_JSON_URL = "https://cataas.com/cat?json=true";
+    private static final String STAR_WARS_URL = "https://swapi.py4e.com/api/people/?format=json";
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-        catImageView = findViewById(R.id.catImageView);
-        catProgressBar = findViewById(R.id.catProgressBar);
+        characterList = findViewById(R.id.characterList);
 
-        catTask = new CatImages();
-        catTask.execute(CAT_JSON_URL);
+        adapter = new CharacterAdapter();
+        characterList.setAdapter(adapter);
+
+        characterList.setOnItemClickListener(new AdapterView.OnItemClickListener() {
+            @Override
+            public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
+                StarWarsCharacter selectedCharacter = characters.get(position);
+
+                Bundle dataToPass = new Bundle();
+                dataToPass.putString("name", selectedCharacter.name);
+                dataToPass.putString("height", selectedCharacter.height);
+                dataToPass.putString("mass", selectedCharacter.mass);
+
+                View fragmentLocation = findViewById(R.id.fragmentLocation);
+
+                if (fragmentLocation == null) {
+                    // Phone layout: open new activity
+                    Intent nextActivity = new Intent(MainActivity.this, EmptyActivity.class);
+                    nextActivity.putExtras(dataToPass);
+                    startActivity(nextActivity);
+                } else {
+                    // Tablet layout: show fragment on the right side
+                    DetailsFragment fragment = new DetailsFragment();
+                    fragment.setArguments(dataToPass);
+
+                    getSupportFragmentManager()
+                            .beginTransaction()
+                            .replace(R.id.fragmentLocation, fragment)
+                            .commit();
+                }
+            }
+        });
+
+        fetchTask = new FetchCharactersTask();
+        fetchTask.execute();
     }
 
     @Override
     protected void onDestroy() {
         super.onDestroy();
 
-        if (catTask != null) {
-            catTask.cancel(true);
+        if (fetchTask != null) {
+            fetchTask.cancel(true);
         }
     }
 
-    private class CatImages extends AsyncTask<String, Integer, String> {
-
-        private Bitmap currentCatPicture;
-        private boolean newPictureReady = false;
+    private class FetchCharactersTask extends AsyncTask<Void, Void, ArrayList<StarWarsCharacter>> {
 
         @Override
-        protected String doInBackground(String... strings) {
+        protected ArrayList<StarWarsCharacter> doInBackground(Void... voids) {
+            ArrayList<StarWarsCharacter> resultList = new ArrayList<>();
 
-            while (!isCancelled()) {
-                try {
-                    URL jsonUrl = new URL(strings[0]);
-                    HttpURLConnection jsonConnection =
-                            (HttpURLConnection) jsonUrl.openConnection();
+            try {
+                URL url = new URL(STAR_WARS_URL);
+                HttpURLConnection connection = (HttpURLConnection) url.openConnection();
 
-                    jsonConnection.connect();
+                connection.setRequestMethod("GET");
+                connection.setConnectTimeout(10000);
+                connection.setReadTimeout(10000);
+                connection.setRequestProperty("User-Agent", "AndroidLabs");
 
-                    InputStream jsonInputStream =
-                            new BufferedInputStream(jsonConnection.getInputStream());
+                connection.connect();
 
-                    String jsonText = readStream(jsonInputStream);
+                int responseCode = connection.getResponseCode();
 
-                    JSONObject jsonObject = new JSONObject(jsonText);
-
-                    String id = jsonObject.getString("id");
-                    String imageUrl = jsonObject.getString("url");
-
-                    String safeFileName = id.replaceAll("[^a-zA-Z0-9._-]", "_") + ".jpg";
-                    File imageFile = new File(getFilesDir(), safeFileName);
-
-                    if (imageFile.exists()) {
-                        currentCatPicture = BitmapFactory.decodeFile(imageFile.getAbsolutePath());
-                    } else {
-                        String fullImageUrl;
-
-                        if (imageUrl.startsWith("http")) {
-                            fullImageUrl = imageUrl;
-                        } else {
-                            fullImageUrl = "https://cataas.com" + imageUrl;
-                        }
-
-                        downloadImageToFile(fullImageUrl, imageFile);
-                        currentCatPicture = BitmapFactory.decodeFile(imageFile.getAbsolutePath());
-                    }
-
-                    newPictureReady = true;
-                    publishProgress(0);
-
-                    for (int i = 0; i <= 100; i++) {
-                        if (isCancelled()) {
-                            break;
-                        }
-
-                        publishProgress(i);
-                        Thread.sleep(30);
-                    }
-
-                } catch (Exception e) {
-                    e.printStackTrace();
-
-                    try {
-                        Thread.sleep(2000);
-                    } catch (Exception ignored) {
-                    }
+                if (responseCode != HttpURLConnection.HTTP_OK) {
+                    Log.e("SWAPI_ERROR", "HTTP response code: " + responseCode);
+                    return resultList;
                 }
+
+                InputStream inputStream = new BufferedInputStream(connection.getInputStream());
+                String responseText = readStream(inputStream);
+
+                Log.d("SWAPI_RESPONSE", responseText);
+
+                JSONObject jsonObject = new JSONObject(responseText);
+                JSONArray results = jsonObject.getJSONArray("results");
+
+                for (int i = 0; i < results.length(); i++) {
+                    JSONObject characterObject = results.getJSONObject(i);
+
+                    String name = characterObject.getString("name");
+                    String height = characterObject.getString("height");
+                    String mass = characterObject.getString("mass");
+
+                    StarWarsCharacter character = new StarWarsCharacter(name, height, mass);
+                    resultList.add(character);
+                }
+
+                inputStream.close();
+                connection.disconnect();
+
+            } catch (Exception e) {
+                e.printStackTrace();
+                Log.e("SWAPI_ERROR", "Problem loading Star Wars API", e);
             }
 
-            return null;
+            return resultList;
         }
 
         @Override
-        protected void onProgressUpdate(Integer... values) {
-            super.onProgressUpdate(values);
+        protected void onPostExecute(ArrayList<StarWarsCharacter> resultList) {
+            super.onPostExecute(resultList);
 
-            catProgressBar.setProgress(values[0]);
+            characters.clear();
+            characters.addAll(resultList);
+            adapter.notifyDataSetChanged();
 
-            if (newPictureReady && currentCatPicture != null) {
-                catImageView.setImageBitmap(currentCatPicture);
-                newPictureReady = false;
+            if (characters.size() == 0) {
+                Toast.makeText(MainActivity.this,
+                        "API failed. Check Logcat for SWAPI_ERROR",
+                        Toast.LENGTH_LONG).show();
             }
         }
 
@@ -144,25 +171,55 @@ public class MainActivity extends AppCompatActivity {
 
             return builder.toString();
         }
+    }
 
-        private void downloadImageToFile(String imageUrl, File imageFile) throws Exception {
-            URL url = new URL(imageUrl);
-            HttpURLConnection connection = (HttpURLConnection) url.openConnection();
+    private class CharacterAdapter extends BaseAdapter {
 
-            connection.connect();
+        @Override
+        public int getCount() {
+            return characters.size();
+        }
 
-            InputStream inputStream = new BufferedInputStream(connection.getInputStream());
-            FileOutputStream outputStream = new FileOutputStream(imageFile);
+        @Override
+        public Object getItem(int position) {
+            return characters.get(position);
+        }
 
-            byte[] buffer = new byte[1024];
-            int bytesRead;
+        @Override
+        public long getItemId(int position) {
+            return position;
+        }
 
-            while ((bytesRead = inputStream.read(buffer)) != -1) {
-                outputStream.write(buffer, 0, bytesRead);
+        @Override
+        public View getView(int position, View oldView, ViewGroup parent) {
+            TextView rowTextView;
+
+            if (oldView == null) {
+                rowTextView = new TextView(MainActivity.this);
+                rowTextView.setTextSize(24);
+                rowTextView.setPadding(8, 8, 8, 8);
+                rowTextView.setTextColor(Color.BLACK);
+                rowTextView.setBackgroundColor(Color.WHITE);
+            } else {
+                rowTextView = (TextView) oldView;
             }
 
-            outputStream.close();
-            inputStream.close();
+            StarWarsCharacter character = characters.get(position);
+            rowTextView.setText(character.name);
+
+            return rowTextView;
+        }
+    }
+
+    private static class StarWarsCharacter {
+        String name;
+        String height;
+        String mass;
+
+        StarWarsCharacter(String name, String height, String mass) {
+            this.name = name;
+            this.height = height;
+            this.mass = mass;
         }
     }
 }

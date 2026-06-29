@@ -1,23 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<ListView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/characterList"
     android:layout_width="match_parent"
-    android:layout_height="match_parent"
-    android:background="#000000">
-
-    <ImageView
-        android:id="@+id/catImageView"
-        android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:scaleType="fitCenter"
-        android:contentDescription="Cat image" />
-
-    <ProgressBar
-        android:id="@+id/catProgressBar"
-        style="?android:attr/progressBarStyleHorizontal"
-        android:layout_width="match_parent"
-        android:layout_height="8dp"
-        android:layout_gravity="bottom"
-        android:max="100"
-        android:progress="0" />
-
-</FrameLayout>
+    android:layout_height="match_parent" />
